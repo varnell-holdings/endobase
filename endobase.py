@@ -9,45 +9,46 @@ import pyautogui as pya
 
 
 ANAESTHETISTS = ['Bowring',
-                 'Dr C Brown',
-                 'Dr Felicity Doherty',
-                 'Dr N Ignatenko',
-                 'locum',
-                 'Dr B Manasiev',
-                 'Dr M Moyle',
-                 "Dr E O'Hare",
-                 "Dr Martine O'Neill",
-                 "Dr G O'Sullivan",
-                 'Dr J Riley',
-                 'Dr Timothy Robertson',
-                 'Dr N Steele',
-                 'Dr J Stevens',
-                 'Dr M Stone',
-                 'Dr J Tester',
-                 'Dr T Thompson',
+                 'Brown',
+                 'Doherty',
+                 'Locum',
+                 'Manasiev',
+                 'MOYLE',
+                 "O'Hare",
+                 "O'Neill",
+                 "O'Sullivan",
+                 'Riley',
+                 'Robertson',
+                 'Steele',
+                 'Stevens',
+                 'Stone',
+                 'Tester',
+                 'Thompson',
                  'Tillett',
-                 'Dr S Vuong',
-                 'Dr Rebecca Wood']
+                 'Vuong',
+                 'Wood']
 
 ENDOSCOPISTS = ['Bariol',
-                'DR M Danta',
-                'Dr R Feller',
-                'DR R Gett',
-                'Dr S Ghaly',
-                'Prof R Lord',
-                'Dr A Meagher',
-                'Dr A Stoita',
-                'Dr C Vickers',
-                'Dr S Vivekanandarajah',
-                'Dr A Wettstein',
-                'Dr D Williams',
-                'Dr N De Luca',
-                'Dr G Owen',
-                'Dr W Bye',
-                'Dr A Kim',
-                'Dr J Mill',
-                'Dr V Nguyen',
-                'Dr Yang Wu']
+                'Danta',
+                'Feller',
+                'GETT',
+                'GHALY',
+                'LORD',
+                'Meagher',
+                'Stoita',
+                'Vickers',
+                'Vivekanandarajah',
+                'Wettstein',
+                'Williams',
+                'DE LUCA',
+                'Owen',
+                'Bye',
+                'Kim',
+                'Haiffer',
+                'Mill',
+                'NGUYEN',
+                'Sanagapalli',
+                'Wu']
 
 PROCEDURES = ['None',
               'Colonoscopy',
@@ -108,7 +109,7 @@ def runner(*args):
 
 
     pya.click(250, 50)
-    pya.PAUSE = 2
+    pya.PAUSE = 0.5
     pya.hotkey('alt', 'a')			
     pya.typewrite(['tab'] * 1)
     pya.typewrite(procedure)
