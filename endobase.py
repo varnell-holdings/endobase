@@ -51,6 +51,7 @@ ENDOSCOPISTS = ['Bariol',
                 'Wu']
 
 PROCEDURES = ['None',
+              'double',
               'Colonoscopy',
               'Gastroscopy',
               'Oesophageal Dilatation',
@@ -58,6 +59,24 @@ PROCEDURES = ['None',
               'BRAVO',
               'HALO']
 
+def clicks(procedure, record_number,endoscopist, anaesthetist):
+    pya.click(250, 50)
+    pya.PAUSE = 0.5
+    pya.hotkey('alt', 'a')			
+    pya.typewrite(['tab'] * 1)
+    pya.typewrite(procedure)
+    pya.press('enter')
+    pya.typewrite(['tab'] * 5)
+    pya.typewrite(record_number)
+    pya.press('enter')
+    pya.typewrite(['tab'] * 6)
+    pya.typewrite(endoscopist)
+    pya.press('enter')
+    pya.press('tab')
+    pya.typewrite(anaesthetist)
+    pya.press('enter')
+    pya.hotkey('alt', 'o')
+    pya.hotkey('alt', 'tab')
 
 def runner(*args):
     global type_of_procedures
@@ -108,24 +127,17 @@ def runner(*args):
           '_' + procedure + '-' + record_number)
 
 
-    pya.click(250, 50)
-    pya.PAUSE = 0.5
-    pya.hotkey('alt', 'a')			
-    pya.typewrite(['tab'] * 1)
-    pya.typewrite(procedure)
-    pya.press('enter')
-    pya.typewrite(['tab'] * 5)
-    pya.typewrite(record_number)
-    pya.press('enter')
-    pya.typewrite(['tab'] * 6)
-    pya.typewrite(endoscopist)
-    pya.press('enter')
-    pya.press('tab')
-    pya.typewrite(anaesthetist)
-    pya.press('enter')
-    pya.hotkey('alt', 'o')
-    
+    if procedure =='double':
+        double_flag = True
+        procedure = 'Gastroscopy'
+    else:
+        double_flag = False
 
+    clicks(procedure, record_number,endoscopist, anaesthetist)
+ 
+    if double_flag:
+        procedure = 'Colonoscopy'
+        clicks(procedure, record_number,endoscopist, anaesthetist)
 
 
 
