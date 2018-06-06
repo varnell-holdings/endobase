@@ -182,8 +182,9 @@ pr['values'] = PROCEDURES
 pr['state'] = 'readonly'
 pr.grid(column=2, row=4, sticky=W)
 
-ttk.Button(mainframe, text='Send!', command=runner).grid(
-    column=2, row=5, sticky=E)
+but = ttk.Button(mainframe, text='Send!', command=runner)
+but.grid(column=2, row=5, sticky=E)
+but.bin('<Return>', runner)
 
 for child in mainframe.winfo_children():
     child.grid_configure(padx=5, pady=5)
