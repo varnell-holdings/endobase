@@ -3,14 +3,12 @@
 Data entry for endobase.
 """
 from collections import defaultdict
-from tkinter import *
-from tkinter import ttk
+from tkinter import Tk, N, S, E, W, StringVar, ttk
 
 import pyautogui as pya
-from config_gui import room
 
 
-ANAESTHETISTS = ['Dr D Bowring',
+ANAESTHETISTS = ['Bowring',
                  'Dr C Brown',
                  'Dr Felicity Doherty',
                  'Dr N Ignatenko',
@@ -27,11 +25,11 @@ ANAESTHETISTS = ['Dr D Bowring',
                  'Dr M Stone',
                  'Dr J Tester',
                  'Dr T Thompson',
-                 'Dr J Tillett',
+                 'Tillett',
                  'Dr S Vuong',
                  'Dr Rebecca Wood']
 
-ENDOSCOPISTS = ['Dr C Bariol',
+ENDOSCOPISTS = ['Bariol',
                 'DR M Danta',
                 'Dr R Feller',
                 'DR R Gett',
@@ -53,8 +51,11 @@ ENDOSCOPISTS = ['Dr C Bariol',
 
 PROCEDURES = ['None',
               'Colonoscopy',
-              'Endoscopy',
-              'Short Colonoscopy']
+              'Gastroscopy',
+              'Oesophageal Dilatation',
+              'Flexible Sigmoidoscopy',
+              'BRAVO',
+              'HALO']
 
 
 def runner(*args):
@@ -102,8 +103,30 @@ def runner(*args):
         if reply == 'No':
             raise Exception
 
-    print(room + '-' + endoscopist + '-' + anaesthetist +
+    print(endoscopist + '-' + anaesthetist +
           '_' + procedure + '-' + record_number)
+
+
+    pya.click(250, 50)
+    pya.PAUSE = 2
+    pya.hotkey('alt', 'a')			
+    pya.typewrite(['tab'] * 1)
+    pya.typewrite(procedure)
+    pya.press('enter')
+    pya.typewrite(['tab'] * 5)
+    pya.typewrite(record_number)
+    pya.press('enter')
+    pya.typewrite(['tab'] * 6)
+    pya.typewrite(endoscopist)
+    pya.press('enter')
+    pya.press('tab')
+    pya.typewrite(anaesthetist)
+    pya.press('enter')
+    pya.hotkey('alt', 'o')
+    
+
+
+
 
 # set up gui
 
