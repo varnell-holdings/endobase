@@ -3,7 +3,8 @@
 Data entry for endobase.
 """
 from collections import defaultdict
-from tkinter import Tk, N, S, E, W, StringVar, ttk
+from tkinter import Tk, N, S, E, W, StringVar, ttk, Menu, FALSE
+import webbrowser
 
 import pyautogui as pya
 
@@ -78,6 +79,11 @@ def clicks(procedure, record_number,endoscopist, anaesthetist):
     pya.hotkey('alt', 'o')
     pya.hotkey('alt', 'tab')
 
+
+
+def open_roster():
+    webbrowser.open('www.home.aone.net.au/tillett/dec/roster.html')
+
 def runner(*args):
     global type_of_procedures
     endoscopist = endo.get()
@@ -147,12 +153,22 @@ def runner(*args):
 root = Tk()
 root.title('Endobase Data Entry')
 root.geometry('320x190+900+100')
-# root.option_add('*tearOff', FALSE)
+root.option_add('*tearOff', FALSE)
 
 mainframe = ttk.Frame(root, padding="3 3 12 12")
 mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
 mainframe.columnconfigure(0, weight=1)
 mainframe.rowconfigure(0, weight=1)
+
+menubar = Menu(root)
+root.config(menu=menubar)
+#win['menu'] = menubar
+menu_extras = Menu(menubar)
+#menu_edit = Menu(menubar)
+menubar.add_cascade(menu=menu_extras, label='Extras')
+menu_extras.add_command(label='Roster', command=open_roster)
+#menu_extras.add_command(label='Web Page', command=open_today)
+
 
 endo = StringVar()
 anaes = StringVar()
@@ -184,7 +200,7 @@ pr.grid(column=2, row=4, sticky=W)
 
 but = ttk.Button(mainframe, text='Send!', command=runner)
 but.grid(column=2, row=5, sticky=E)
-but.bin('<Return>', runner)
+but.bind('<Return>', runner)
 
 for child in mainframe.winfo_children():
     child.grid_configure(padx=5, pady=5)
