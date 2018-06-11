@@ -52,7 +52,7 @@ ENDOSCOPISTS = ['Bariol',
                 'Wu']
 
 PROCEDURES = ['None',
-              'double',
+              'Double',
               'Colonoscopy',
               'Gastroscopy',
               'Oesophageal Dilatation',
@@ -60,10 +60,11 @@ PROCEDURES = ['None',
               'BRAVO',
               'HALO']
 
-def clicks(procedure, record_number,endoscopist, anaesthetist):
+
+def clicks(procedure, record_number, endoscopist, anaesthetist):
     pya.click(250, 50)
     pya.PAUSE = 0.5
-    pya.hotkey('alt', 'a')			
+    pya.hotkey('alt', 'a')
     pya.typewrite(['tab'] * 1)
     pya.typewrite(procedure)
     pya.press('enter')
@@ -80,9 +81,9 @@ def clicks(procedure, record_number,endoscopist, anaesthetist):
     pya.hotkey('alt', 'tab')
 
 
-
 def open_roster():
     webbrowser.open('www.home.aone.net.au/tillett/dec/roster.html')
+
 
 def runner(*args):
     global type_of_procedures
@@ -91,9 +92,13 @@ def runner(*args):
     record_number = mrn.get()
     procedure = proc.get()
     proc.set('None')
+    mrn.set('')
+    mr.focus()
 
-    if procedure == 'None':
-        pya.alert(text='No Procedure!',
+    no_doc = endoscopist not in ENDOSCOPISTS
+    no_an = anaesthetist not in ANAESTHETISTS
+    if procedure == 'None' or no_doc or no_an:
+        pya.alert(text='Missing Data!',
                   title='',
                   button='OK')
         raise Exception
@@ -115,10 +120,15 @@ def runner(*args):
         else:
             ignore_number_flag = True
 
-    type_of_procedures[record_number].append(procedure)
+    if procedure == 'Double':
+        type_of_procedures[record_number].extend(
+            ['Colonoscopy', 'Gastroscopy'])
+    else:
+        type_of_procedures[record_number].append(procedure)
     print(type_of_procedures[record_number])
 
     number_of_procedures = len(type_of_procedures[record_number])
+
     print(number_of_procedures)
     if number_of_procedures > 2 and not ignore_number_flag:
         reply = pya.confirm(
@@ -130,22 +140,19 @@ def runner(*args):
             raise Exception
 
     print(endoscopist + '-' + anaesthetist +
-          '_' + procedure + '-' + record_number)
+          '-' + procedure + '-' + record_number)
 
-
-    if procedure =='double':
+    if procedure == 'Double':
         double_flag = True
         procedure = 'Gastroscopy'
     else:
         double_flag = False
 
-    clicks(procedure, record_number,endoscopist, anaesthetist)
- 
+    clicks(procedure, record_number, endoscopist, anaesthetist)
+
     if double_flag:
         procedure = 'Colonoscopy'
-        clicks(procedure, record_number,endoscopist, anaesthetist)
-
-
+        clicks(procedure, record_number, endoscopist, anaesthetist)
 
 # set up gui
 
@@ -162,12 +169,12 @@ mainframe.rowconfigure(0, weight=1)
 
 menubar = Menu(root)
 root.config(menu=menubar)
-#win['menu'] = menubar
+# win['menu'] = menubar
 menu_extras = Menu(menubar)
-#menu_edit = Menu(menubar)
+# menu_edit = Menu(menubar)
 menubar.add_cascade(menu=menu_extras, label='Extras')
 menu_extras.add_command(label='Roster', command=open_roster)
-#menu_extras.add_command(label='Web Page', command=open_today)
+# menu_extras.add_command(label='Web Page', command=open_today)
 
 
 endo = StringVar()
@@ -190,7 +197,8 @@ an['state'] = 'readonly'
 an.grid(column=2, row=2, sticky=W)
 
 ttk.Label(mainframe, text="MRN").grid(column=1, row=3, sticky=W)
-ttk.Entry(mainframe, textvariable=mrn).grid(column=2, row=3, sticky=W)
+mr = ttk.Entry(mainframe, textvariable=mrn)
+mr.grid(column=2, row=3, sticky=W)
 
 ttk.Label(mainframe, text="Procedure").grid(column=1, row=4, sticky=W)
 pr = ttk.Combobox(mainframe, textvariable=proc)
@@ -205,6 +213,7 @@ but.bind('<Return>', runner)
 for child in mainframe.winfo_children():
     child.grid_configure(padx=5, pady=5)
 
+end.focus()
 proc.set('None')
 
 root.mainloop()
