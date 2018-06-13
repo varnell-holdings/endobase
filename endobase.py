@@ -215,5 +215,6 @@ for child in mainframe.winfo_children():
 
 end.focus()
 proc.set('None')
+root.attributes("-topmost", True)
 
 root.mainloop()
