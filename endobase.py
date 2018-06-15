@@ -78,7 +78,7 @@ def clicks(procedure, record_number, endoscopist, anaesthetist):
     pya.typewrite(anaesthetist)
     pya.press('enter')
     pya.hotkey('alt', 'o')
-    pya.hotkey('alt', 'tab')
+    pya.click(1000, 230)
 
 
 def open_roster():
