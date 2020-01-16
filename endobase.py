@@ -9,9 +9,12 @@ import webbrowser
 import pyautogui as pya
 
 
-ANAESTHETISTS = ['Bowring',
+ANAESTHETISTS = ['Barrett',
+                 'Bowring',
                  'Brown',
                  'Doherty',
+                 'Heffernan',
+                 'Lee',   
                  'Locum',
                  'Manasiev',
                  'MOYLE',
@@ -45,7 +48,8 @@ ENDOSCOPISTS = ['Bariol',
                 'Owen',
                 'Bye',
                 'Kim',
-                'Haiffer',
+                'Haifer',
+                'Lockart',
                 'Mill',
                 'NGUYEN',
                 'Sanagapalli',
@@ -78,7 +82,7 @@ def clicks(procedure, record_number, endoscopist, anaesthetist):
     pya.typewrite(anaesthetist)
     pya.press('enter')
     pya.hotkey('alt', 'o')
-    pya.click(1000, 230)
+    pya.click(1000, 530)
 
 
 def open_roster():
@@ -159,7 +163,7 @@ def runner(*args):
 
 root = Tk()
 root.title('Endobase Data Entry')
-root.geometry('320x190+900+100')
+root.geometry('320x190+900+400')
 root.option_add('*tearOff', FALSE)
 
 mainframe = ttk.Frame(root, padding="3 3 12 12")
