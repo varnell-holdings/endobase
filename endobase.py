@@ -1,10 +1,23 @@
 # -*- coding: utf-8 -*-
 """
 Data entry for endobase.
+Also uploads data to an AWS bucket for use by docbill
+prgram on anaesthetist's computers
 """
+
+import atexit
 from collections import defaultdict
+import csv
+from datetime import datetime, timedelta
+import io
+import os
+import os.path
 from tkinter import Tk, N, S, E, W, StringVar, ttk, Menu, FALSE
+import urllib.request
 import webbrowser
+
+import boto3
+from PIL import Image
 
 import pyautogui as pya
 
@@ -65,7 +78,182 @@ PROCEDURES = ['None',
               'HALO']
 
 
-def clicks(procedure, record_number, endoscopist, anaesthetist):
+DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+pat_file = os.path.join(DIRECTORY, 'patients.csv')
+today_pat_file = os.path.join(DIRECTORY, 'today_patients.csv')
+screenshot_for_ocr = os.path.join(DIRECTORY, 'final_screenshot.png')
+today = datetime.today()
+
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.normpath('c:/users/staff/miniconda/endobase/My First Project-19b55679f742.json')
+
+
+def connect():
+    try:
+        urllib.request.urlopen('http://google.com')  # Python 3.x
+        return True
+    except:
+        return False
+
+
+@atexit.register
+def upload_to_aws():
+    """
+    Downloads csv file from aws s3 bucket dec601
+    puts the entries in a list while deleting records older than 10 days
+    concatenates that with the csv file of patients added in this run 
+    - today_pat_file
+    uploads csv file to s3
+    """
+        
+    s3 = boto3.resource('s3')  
+    
+    s3.Object('dec601', 'patients.csv').download_file(pat_file)
+
+    temp_list = []
+    with open(pat_file) as h:
+        reader = csv.reader(h)
+        for p in reader:
+            print(p[0])
+            try:
+                pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
+                if pat_date + timedelta(days=10) >= today:
+                    temp_list.append(p)
+            except ValueError as e:
+                temp_list.append(p)
+                print(e)
+                print(p[0])
+    with  open(today_pat_file, 'a') as h:
+        csv_writer = csv.writer(h, dialect="excel", lineterminator='\n')
+        for p in temp_list:
+            csv_writer.writerow(p)
+  
+    try:
+        data = open(today_pat_file, 'rb')
+        s3.Bucket('dec601').put_object(Key='patients.csv', Body=data)
+    except Exception as e:
+        print(e)
+    print('Exit upload worked!')
+
+
+def patient_to_file(data):
+    """
+    input data is a tuple containing
+    date, doctor, ,mrn, name
+    adds this data to a csv file of patients from this run
+    """
+
+    with open(os.path.join(DIRECTORY, today_pat_file), 'at') as f:
+        writer = csv.writer(f, dialect="excel", lineterminator="\n")
+        writer.writerow(data)
+
+
+def get_concat_h(im1, im2, im3):
+    """
+    input - three Pil image objects representing screenshots of
+    date, surname and firsname fields in edobase entry form
+    puts them in a new image and saves it at screenshot_for_ocr.png file in
+    the endobase directory
+    """
+    dst = Image.new('RGB', (im1.width + im2.width + im3.width, im1.height))
+    dst.paste(im1, (0, 0))
+    dst.paste(im2, (im1.width, 0))
+    dst.paste(im3, (im1.width * 2, 0))
+    
+    dst.save(screenshot_for_ocr)
+
+
+			  
+def detect_text(im1, im2, im3):
+    """Detects text in the given image  files
+    Concatentes them, runs them through google vision api
+    texts is the name of the returned object by the api
+    
+    """
+    from google.cloud import vision
+    client = vision.ImageAnnotatorClient()
+
+
+    get_concat_h(im1, im2, im3)
+
+
+
+    with io.open(screenshot_for_ocr, 'rb') as image_file:
+        content = image_file.read()
+
+    image = vision.types.Image(content=content)
+
+    response = client.text_detection(image=image)
+    texts = response.text_annotations
+    
+    
+#    The following is just terminal output
+    print('Texts:')
+
+    for text in texts:
+#        ocr_value = text.description
+        print('\n"{}"'.format(text.description))
+
+        vertices = (['({},{})'.format(vertex.x, vertex.y)
+                    for vertex in text.bounding_poly.vertices])
+
+        print('bounds: {}'.format(','.join(vertices)))
+
+    if response.error.message:
+        raise Exception(
+            '{}\nFor more info on error messages, check: '
+            'https://cloud.google.com/apis/design/errors'.format(
+                response.error.message))
+    
+    
+#    iterate over returned object and get a newline separated string
+    texts_as_string = ""
+    for word in texts:
+        word_as_string = word.description
+        texts_as_string += word_as_string
+        texts_as_string += "\n"
+
+    texts_split = texts_as_string.split("\n")
+    print(texts_split[0], texts_split[1], texts_split[2])
+    ocr_date = texts_split[0]
+    ocr_fullname = texts_split[1] + ", " + texts_split[2]
+
+    return ocr_date, ocr_fullname
+    
+
+def get_date_image():
+    """
+    Use pyautogui to get a screenshot of the date box on endobase entry form
+    Save it as this_date.png and return a Pil Image object
+    """
+    x, y = pya.locateCenterOnScreen(os.path.join(DIRECTORY, 'date.png'), region=(400, 200, 400, 200))
+    print("[DATE] {}, {}".format(x, y))
+    this_date = os.path.join(DIRECTORY, 'this_date.jpg')
+    im_date = pya.screenshot(this_date, region=(x - 15, y + 7, 200, 25))
+    return im_date
+
+
+def get_names_images():
+    """
+    Use pyautogui to get a screenshot of the names boxes on endobase entry form
+    Save them as 'this_surname.jpg' and 'this_firstname.jpg'  and return two Pil Image objects
+    """
+    x, y = pya.locateCenterOnScreen(os.path.join(DIRECTORY, 'names.png'), region=(0, 300, 200, 100))
+    print("[NAME] {}, {}".format(x, y))
+    
+    this_surname = os.path.join(DIRECTORY, 'this_surname.jpg')
+    im_surname = pya.screenshot(this_surname, region=(0, y + 20, 200, 25))
+    
+    this_firstname = os.path.join(DIRECTORY, 'this_firstname.jpg')
+    im_firstname = pya.screenshot(this_firstname, region=(0, y + 65, 200, 25))
+    
+    return im_surname, im_firstname
+
+			  
+def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
+    """
+    Workhorse pyautogui function. Tabs through data entry field and inputs data
+    Then tries to ocr the date and name fields and write them to a csv file
+    """
     pya.click(250, 50)
     pya.PAUSE = 0.5
     pya.hotkey('alt', 'a')
@@ -81,8 +269,24 @@ def clicks(procedure, record_number, endoscopist, anaesthetist):
     pya.press('tab')
     pya.typewrite(anaesthetist)
     pya.press('enter')
+
+    print('[DOUBLE_FLAG] {}'.format(double_flag))
+
+    if ((not double_flag) or (double_flag and procedure == 'Gastroscopy')) and connected:
+        try:
+            im_date = get_date_image()
+            im_surname, im_firstname = get_names_images()
+            
+            ocr_date, ocr_fullname = detect_text(im_date, im_surname, im_firstname)
+    
+            data = (ocr_date, endoscopist, record_number, ocr_fullname)
+            patient_to_file(data)
+        except Exception as e:
+            print("OCR Failed!")
+            print(e)
+    
     pya.hotkey('alt', 'o')
-    pya.click(1000, 530)
+    pya.click(1000, 230)
 
 
 def open_roster():
@@ -90,6 +294,11 @@ def open_roster():
 
 
 def runner(*args):
+    """
+    Main function that runs when button clicked
+    gets data from gui, does a few checks,
+    then fires off clicks() function
+    """
     global type_of_procedures
     endoscopist = endo.get()
     anaesthetist = anaes.get()
@@ -98,6 +307,9 @@ def runner(*args):
     proc.set('None')
     mrn.set('')
     mr.focus()
+
+
+
 
     no_doc = endoscopist not in ENDOSCOPISTS
     no_an = anaesthetist not in ANAESTHETISTS
@@ -152,15 +364,23 @@ def runner(*args):
     else:
         double_flag = False
 
-    clicks(procedure, record_number, endoscopist, anaesthetist)
+    clicks(procedure, record_number, endoscopist, anaesthetist, double_flag)
 
     if double_flag:
         procedure = 'Colonoscopy'
-        clicks(procedure, record_number, endoscopist, anaesthetist)
+        clicks(procedure, record_number, endoscopist, anaesthetist, double_flag)
+
+
+# start of script
+connected = connect()
+print('Connected to Internet' if connected else 'No Internet!')
+
+if os.path.exists(pat_file):
+    os.remove(pat_file)
+if os.path.exists(today_pat_file):
+    os.remove(today_pat_file)
 
 # set up gui
-
-
 root = Tk()
 root.title('Endobase Data Entry')
 root.geometry('320x190+900+400')
