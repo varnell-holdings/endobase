@@ -77,14 +77,17 @@ PROCEDURES = ['None',
               'BRAVO',
               'HALO']
 
+add = os.path.dirname(os.path.abspath(__file__))
+base = os.path.dirname(add)
+enobase_local_path = os.path.join(base, "endobase_local")
 
-DIRECTORY = os.path.dirname(os.path.abspath(__file__))
-pat_file = os.path.join(DIRECTORY, 'patients.csv')
-today_pat_file = os.path.join(DIRECTORY, 'today_patients.csv')
-screenshot_for_ocr = os.path.join(DIRECTORY, 'final_screenshot.png')
+pat_file = os.path.join(enobase_local_path, 'patients.csv')
+today_pat_file = os.path.join(enobase_local_path, 'today_patients.csv')
+screenshot_for_ocr = os.path.join(enobase_local_path, 'final_screenshot.png')
+
 today = datetime.today()
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.normpath('c:/users/staff/miniconda/endobase/My First Project-19b55679f742.json')
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(enobase_local_path, 'My First Project-19b55679f742.json')
 
 
 def connect():
@@ -142,7 +145,7 @@ def patient_to_file(data):
     adds this data to a csv file of patients from this run
     """
 
-    with open(os.path.join(DIRECTORY, today_pat_file), 'at') as f:
+    with open(os.path.join(enobase_local_path, today_pat_file), 'at') as f:
         writer = csv.writer(f, dialect="excel", lineterminator="\n")
         writer.writerow(data)
 
@@ -225,9 +228,9 @@ def get_date_image():
     Use pyautogui to get a screenshot of the date box on endobase entry form
     Save it as this_date.png and return a Pil Image object
     """
-    x, y = pya.locateCenterOnScreen(os.path.join(DIRECTORY, 'date.png'), region=(400, 200, 400, 200))
+    x, y = pya.locateCenterOnScreen(os.path.join(enobase_local_path, 'date.png'), region=(400, 200, 400, 200))
     print("[DATE] {}, {}".format(x, y))
-    this_date = os.path.join(DIRECTORY, 'this_date.jpg')
+    this_date = os.path.join(enobase_local_path, 'this_date.jpg')
     im_date = pya.screenshot(this_date, region=(x - 15, y + 7, 200, 25))
     return im_date
 
@@ -237,13 +240,13 @@ def get_names_images():
     Use pyautogui to get a screenshot of the names boxes on endobase entry form
     Save them as 'this_surname.jpg' and 'this_firstname.jpg'  and return two Pil Image objects
     """
-    x, y = pya.locateCenterOnScreen(os.path.join(DIRECTORY, 'names.png'), region=(0, 300, 200, 100))
+    x, y = pya.locateCenterOnScreen(os.path.join(enobase_local_path, 'names.png'), region=(0, 300, 200, 100))
     print("[NAME] {}, {}".format(x, y))
     
-    this_surname = os.path.join(DIRECTORY, 'this_surname.jpg')
+    this_surname = os.path.join(enobase_local_path, 'this_surname.jpg')
     im_surname = pya.screenshot(this_surname, region=(0, y + 20, 200, 25))
     
-    this_firstname = os.path.join(DIRECTORY, 'this_firstname.jpg')
+    this_firstname = os.path.join(enobase_local_path, 'this_firstname.jpg')
     im_firstname = pya.screenshot(this_firstname, region=(0, y + 65, 200, 25))
     
     return im_surname, im_firstname
@@ -375,10 +378,17 @@ def runner(*args):
 connected = connect()
 print('Connected to Internet' if connected else 'No Internet!')
 
-if os.path.exists(pat_file):
+try:
     os.remove(pat_file)
-if os.path.exists(today_pat_file):
+except Exception as e:
+    print('Failed to remove')
+    print(e)
+
+try:
     os.remove(today_pat_file)
+except Exception as e:
+    print('Failed to remove')
+    print(e)
 
 # set up gui
 root = Tk()
