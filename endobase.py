@@ -21,6 +21,8 @@ from PIL import Image
 
 import pyautogui as pya
 
+from google.cloud import vision
+
 
 ANAESTHETISTS = ['Barrett',
                  'Bowring',
@@ -172,7 +174,6 @@ def detect_text(im1, im2, im3):
     texts is the name of the returned object by the api
     
     """
-    from google.cloud import vision
     client = vision.ImageAnnotatorClient()
 
 
