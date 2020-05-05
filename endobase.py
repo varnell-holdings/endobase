@@ -293,7 +293,7 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
 
 
 def open_roster():
-    webbrowser.open('www.home.aone.net.au/tillett/dec/roster.html')
+    webbrowser.open('http://dec601.nfshost.com/jtlinks.html')
 
 
 def runner(*args):
