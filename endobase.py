@@ -21,8 +21,6 @@ from PIL import Image
 
 import pyautogui as pya
 
-from google.cloud import vision
-
 
 ANAESTHETISTS = ['Barrett',
                  'Bowring',
@@ -89,7 +87,7 @@ screenshot_for_ocr = os.path.join(enobase_local_path, 'final_screenshot.png')
 
 today = datetime.today()
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(enobase_local_path, 'My First Project-19b55679f742.json')
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(enobase_local_path, 'named-chariot-275007-760483f6424c.json')
 
 
 def connect():
@@ -143,7 +141,7 @@ def upload_to_aws():
 def patient_to_file(data):
     """
     input data is a tuple containing
-    date, doctor, ,mrn, name
+    date, doctor, ,mrn, name, anaesthetist, procedure, timestamp
     adds this data to a csv file of patients from this run
     """
 
@@ -174,6 +172,7 @@ def detect_text(im1, im2, im3):
     texts is the name of the returned object by the api
     
     """
+    from google.cloud import vision
     client = vision.ImageAnnotatorClient()
 
 
@@ -282,8 +281,8 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
             im_surname, im_firstname = get_names_images()
             
             ocr_date, ocr_fullname = detect_text(im_date, im_surname, im_firstname)
-    
-            data = (ocr_date, endoscopist, record_number, ocr_fullname)
+            timestamp = datetime.now().strftime("%H%M%S")
+            data = (ocr_date, endoscopist, record_number, ocr_fullname, anaesthetist, procedure, timestamp)
             patient_to_file(data)
         except Exception as e:
             print("OCR Failed!")
