@@ -2,7 +2,7 @@
 """
 Data entry for endobase.
 Also uploads data to an AWS bucket for use by docbill
-prgram on anaesthetist's computers
+program on anaesthetist's computers
 """
 
 import atexit
@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import io
 import os
 import os.path
+import threading
 from tkinter import Tk, N, S, E, W, StringVar, ttk, Menu, FALSE
 import urllib.request
 import webbrowser
@@ -92,7 +93,7 @@ os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(enobase_local_path, 
 
 def connect():
     try:
-        urllib.request.urlopen('http://google.com')  # Python 3.x
+        urllib.request.urlopen('http://google.com')
         return True
     except:
         return False
@@ -116,15 +117,10 @@ def upload_to_aws():
     with open(pat_file) as h:
         reader = csv.reader(h)
         for p in reader:
-            print(p[0])
-            try:
-                pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
+            pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
                 if pat_date + timedelta(days=10) >= today:
                     temp_list.append(p)
-            except ValueError as e:
-                temp_list.append(p)
-                print(e)
-                print(p[0])
+
     with  open(today_pat_file, 'a') as h:
         csv_writer = csv.writer(h, dialect="excel", lineterminator='\n')
         for p in temp_list:
@@ -153,14 +149,14 @@ def patient_to_file(data):
 def get_concat_h(im1, im2, im3):
     """
     input - three Pil image objects representing screenshots of
-    date, surname and firsname fields in edobase entry form
+    date, surname and firstname fields in endobase add page
     puts them in a new image and saves it at screenshot_for_ocr.png file in
-    the endobase directory
+    the endobase_local directory
     """
     dst = Image.new('RGB', (im1.width + im2.width + im3.width, im1.height))
     dst.paste(im1, (0, 0))
     dst.paste(im2, (im1.width, 0))
-    dst.paste(im3, (im1.width * 2, 0))
+    dst.paste(im3, (im1.width + im2.width, 0))
     
     dst.save(screenshot_for_ocr)
 
@@ -175,11 +171,8 @@ def detect_text(im1, im2, im3):
     from google.cloud import vision
     client = vision.ImageAnnotatorClient()
 
-
     get_concat_h(im1, im2, im3)
-
-
-
+	
     with io.open(screenshot_for_ocr, 'rb') as image_file:
         content = image_file.read()
 
@@ -187,18 +180,14 @@ def detect_text(im1, im2, im3):
 
     response = client.text_detection(image=image)
     texts = response.text_annotations
-    
-    
+        
 #    The following is just terminal output
     print('Texts:')
-
     for text in texts:
 #        ocr_value = text.description
         print('\n"{}"'.format(text.description))
-
         vertices = (['({},{})'.format(vertex.x, vertex.y)
                     for vertex in text.bounding_poly.vertices])
-
         print('bounds: {}'.format(','.join(vertices)))
 
     if response.error.message:
@@ -206,8 +195,7 @@ def detect_text(im1, im2, im3):
             '{}\nFor more info on error messages, check: '
             'https://cloud.google.com/apis/design/errors'.format(
                 response.error.message))
-    
-    
+   
 #    iterate over returned object and get a newline separated string
     texts_as_string = ""
     for word in texts:
@@ -251,10 +239,17 @@ def get_names_images():
     
     return im_surname, im_firstname
 
+def ocr():
+	"""Wrapper function. For Thread call"""
+
+	ocr_date, ocr_fullname = detect_text(im_date, im_surname, im_firstname)
+	data = (ocr_date, endoscopist, record_number, ocr_fullname, anaesthetist, procedure, timestamp)
+	patient_to_file(data)
+
 			  
 def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
     """
-    Workhorse pyautogui function. Tabs through data entry field and inputs data
+    Workhorse pyautogui function. Tabs through endobase add patient entry field and inputs data
     Then tries to ocr the date and name fields and write them to a csv file
     """
     pya.click(250, 50)
@@ -279,11 +274,10 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
         try:
             im_date = get_date_image()
             im_surname, im_firstname = get_names_images()
-            
-            ocr_date, ocr_fullname = detect_text(im_date, im_surname, im_firstname)
             timestamp = datetime.now().strftime("%H%M%S")
-            data = (ocr_date, endoscopist, record_number, ocr_fullname, anaesthetist, procedure, timestamp)
-            patient_to_file(data)
+	
+            t = threading.Thread(target=ocr)
+	    t.start()
         except Exception as e:
             print("OCR Failed!")
             print(e)
@@ -293,7 +287,7 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
 
 
 def open_roster():
-    webbrowser.open('http://dec601.nfshost.com/jtlinks.html')
+    webbrowser.open('http://dec601.nfshost.com/deccal.html')
 
 
 def runner(*args):
@@ -310,9 +304,6 @@ def runner(*args):
     proc.set('None')
     mrn.set('')
     mr.focus()
-
-
-
 
     no_doc = endoscopist not in ENDOSCOPISTS
     no_an = anaesthetist not in ANAESTHETISTS
