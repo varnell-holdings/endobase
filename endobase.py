@@ -130,7 +130,19 @@ def upload_to_aws():
         s3.Bucket('dec601').put_object(Key='patients.csv', Body=data)
     except Exception as e:
         print(e)
-    print('Exit upload worked!')
+    	print('Exit upload worked!')
+
+	try:
+    	os.remove(pat_file)
+	except Exception as e:
+    	print('Failed to remove pat_file')
+    	print(e)
+
+	try:
+		os.remove(today_pat_file)
+	except Exception as e:
+		print('Failed to remove today_pat_file')
+		print(e)
 
 
 def patient_to_file(data):
@@ -366,17 +378,6 @@ def runner(*args):
 connected = connect()
 print('Connected to Internet' if connected else 'No Internet!')
 
-try:
-    os.remove(pat_file)
-except Exception as e:
-    print('Failed to remove')
-    print(e)
-
-try:
-    os.remove(today_pat_file)
-except Exception as e:
-    print('Failed to remove')
-    print(e)
 
 # set up gui
 root = Tk()
