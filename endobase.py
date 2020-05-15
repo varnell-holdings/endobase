@@ -108,7 +108,6 @@ def upload_to_aws():
     - today_pat_file
     uploads csv file to s3
     """
-        
     s3 = boto3.resource('s3')  
     
     s3.Object('dec601', 'patients.csv').download_file(pat_file)
@@ -277,14 +276,13 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
             timestamp = datetime.now().strftime("%H%M%S")
 	
             t = threading.Thread(target=ocr)
-	    t.start()
+	    	t.start()
         except Exception as e:
             print("OCR Failed!")
             print(e)
     
     pya.hotkey('alt', 'o')
     pya.click(1000, 230)
-
 
 def open_roster():
     webbrowser.open('http://dec601.nfshost.com/deccal.html')
@@ -363,7 +361,6 @@ def runner(*args):
     if double_flag:
         procedure = 'Colonoscopy'
         clicks(procedure, record_number, endoscopist, anaesthetist, double_flag)
-
 
 # start of script
 connected = connect()
