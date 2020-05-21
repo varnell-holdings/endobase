@@ -117,8 +117,8 @@ def upload_to_aws():
         reader = csv.reader(h)
         for p in reader:
             pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
-                if pat_date + timedelta(days=10) >= today:
-                    temp_list.append(p)
+            if pat_date + timedelta(days=10) >= today:
+                temp_list.append(p)
 
     with  open(today_pat_file, 'a') as h:
         csv_writer = csv.writer(h, dialect="excel", lineterminator='\n')
@@ -126,23 +126,11 @@ def upload_to_aws():
             csv_writer.writerow(p)
   
     try:
-        data = open(today_pat_file, 'rb')
-        s3.Bucket('dec601').put_object(Key='patients.csv', Body=data)
+        with open(today_pat_file, 'rb') as data:
+            s3.Bucket('dec601').put_object(Key='patients.csv', Body=data)
+            print('Exit upload worked!')
     except Exception as e:
         print(e)
-    	print('Exit upload worked!')
-
-	try:
-    	os.remove(pat_file)
-	except Exception as e:
-    	print('Failed to remove pat_file')
-    	print(e)
-
-	try:
-		os.remove(today_pat_file)
-	except Exception as e:
-		print('Failed to remove today_pat_file')
-		print(e)
 
 
 def patient_to_file(data):
@@ -250,7 +238,7 @@ def get_names_images():
     
     return im_surname, im_firstname
 
-def ocr():
+def ocr(im_date, im_surname, im_firstname, endoscopist, record_number, anaesthetist, procedure, timestamp):
 	"""Wrapper function. For Thread call"""
 
 	ocr_date, ocr_fullname = detect_text(im_date, im_surname, im_firstname)
@@ -287,8 +275,10 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
             im_surname, im_firstname = get_names_images()
             timestamp = datetime.now().strftime("%H%M%S")
 	
-            t = threading.Thread(target=ocr)
-	    	t.start()
+            t = threading.Thread(target=ocr, args=(im_date, im_surname,
+                                 im_firstname, endoscopist, record_number,
+                                 anaesthetist, procedure, timestamp))
+            t.start()
         except Exception as e:
             print("OCR Failed!")
             print(e)
@@ -378,6 +368,19 @@ def runner(*args):
 connected = connect()
 print('Connected to Internet' if connected else 'No Internet!')
 
+
+
+try:
+	os.remove(pat_file)
+except Exception as e:
+	print('Failed to remove pat_file')
+	print(e)
+
+try:
+    os.remove(today_pat_file)
+except Exception as e:
+    print('Failed to remove today_pat_file')
+    print(e)
 
 # set up gui
 root = Tk()
