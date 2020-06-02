@@ -5,7 +5,7 @@ Also uploads data to an AWS bucket for use by docbill
 program on anaesthetist's computers
 """
 
-import atexit
+#import atexit
 from collections import defaultdict
 import csv
 from datetime import datetime, timedelta
@@ -83,8 +83,8 @@ add = os.path.dirname(os.path.abspath(__file__))
 base = os.path.dirname(add)
 enobase_local_path = os.path.join(base, "endobase_local")
 
-pat_file = os.path.join(enobase_local_path, 'patients.csv')
-today_pat_file = os.path.join(enobase_local_path, 'today_patients.csv')
+aws_file = os.path.join(enobase_local_path, 'patients.csv')
+backup_pat_file = os.path.join(enobase_local_path, 'backup_patients.csv')
 screenshot_for_ocr = os.path.join(enobase_local_path, 'final_screenshot.png')
 logging_file = os.path.join(enobase_local_path, 'logging.txt')
 
@@ -101,51 +101,51 @@ def connect():
         return False
 
 
-@atexit.register
-def upload_to_aws():
-    """
-    Downloads csv file from aws s3 bucket dec601
-    puts the entries in a list while deleting records older than 10 days
-    concatenates that with the csv file of patients added in this run 
-    - today_pat_file
-    uploads csv file to s3
-    """
-    s3 = boto3.resource('s3')  
-    
-    s3.Object('dec601', 'patients.csv').download_file(pat_file)
+#@atexit.register
+#def upload_to_aws():
+#    """
+#    Downloads csv file from aws s3 bucket dec601
+#    puts the entries in a list while deleting records older than 10 days
+#    concatenates that with the csv file of patients added in this run 
+#    - today_pat_file
+#    uploads csv file to s3
+#    """
+#    s3 = boto3.resource('s3')  
+#    
+#    s3.Object('dec601', 'patients.csv').download_file(pat_file)
+#
+#    temp_list = []
+#    with open(pat_file, encoding="utf-8") as h:
+#        reader = csv.reader(h)
+#        for p in reader:
+#            pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
+#            if pat_date + timedelta(days=5) >= today:
+#                temp_list.append(p)
+#
+#    with  open(today_pat_file, 'a', encoding="utf-8") as h:
+#        csv_writer = csv.writer(h, dialect="excel", lineterminator='\n')
+#        for p in temp_list:
+#            csv_writer.writerow(p)
+#  
+#    try:
+#        with open(today_pat_file, 'rb') as data:
+#            s3.Bucket('dec601').put_object(Key='patients.csv', Body=data)
+#            print('upload worked!')
+#            logging.info("upload worked!")
+#    except Exception as e:
+#        print(e)
+#        logging.error("upload failed!")
+#        logging.error(e)
 
-    temp_list = []
-    with open(pat_file, encoding="utf-8") as h:
-        reader = csv.reader(h)
-        for p in reader:
-            pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
-            if pat_date + timedelta(days=5) >= today:
-                temp_list.append(p)
 
-    with  open(today_pat_file, 'a', encoding="utf-8") as h:
-        csv_writer = csv.writer(h, dialect="excel", lineterminator='\n')
-        for p in temp_list:
-            csv_writer.writerow(p)
-  
-    try:
-        with open(today_pat_file, 'rb') as data:
-            s3.Bucket('dec601').put_object(Key='patients.csv', Body=data)
-            print('Exit upload worked!')
-            logging.info("Exit upload worked!")
-    except Exception as e:
-        print(e)
-        logging.error("Exit upload failed!")
-        logging.error(e)
-
-
-def patient_to_file(data):
+def patient_to_backup_file(data):
     """
     input data is a tuple containing
     date, doctor, ,mrn, name, anaesthetist, procedure, timestamp
     adds this data to a csv file of patients from this run
     """
 
-    with open(os.path.join(enobase_local_path, today_pat_file), 'at', encoding="utf-8") as f:
+    with open(os.path.join(enobase_local_path, backup_pat_file), 'at', encoding="utf-8") as f:
         writer = csv.writer(f, dialect="excel", lineterminator="\n")
         writer.writerow(data)
 
@@ -245,14 +245,51 @@ def get_names_images():
     
     return im_surname, im_firstname
 
+
+def upload_aws(data):
+    s3 = boto3.resource('s3')  
+    s3.Object('dec601', 'patients.csv').download_file(aws_file)
+    # put aws data into temp list & remove old data
+    temp_list = []
+    with open(aws_file, encoding="utf-8") as h:
+        reader = csv.reader(h)
+        for p in reader:
+            pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
+            if pat_date + timedelta(days=5) >= today:
+                temp_list.append(p)
+    temp_list.append(data)
+    # write the temp list over the old aws file
+    with  open(aws_file, 'w', encoding="utf-8") as h:
+            csv_writer = csv.writer(h, dialect="excel", lineterminator='\n')
+            for p in temp_list:
+                csv_writer.writerow(p)
+    # upload aws file
+    try:
+        with open(aws_file, 'rb') as data:
+            s3.Bucket('dec601').put_object(Key='patients.csv', Body=data)
+            print('upload worked!')
+            logging.info("upload worked!")
+    except Exception as e:
+        print(e)
+        logging.error("upload failed!")
+        logging.exception()
+
+    try:
+        os.remove(aws_file)
+    except Exception as e:
+        print('Failed to remove aws_file')
+        print(e)
+        logging.exception()
+
+
 def ocr(im_date, im_surname, im_firstname, endoscopist, record_number, anaesthetist, procedure, timestamp):
-	"""Wrapper function. For Thread call"""
+    """Wrapper function. For Thread call"""
+    ocr_date, ocr_fullname = detect_text(im_date, im_surname, im_firstname)
+    data = [ocr_date, endoscopist, record_number, ocr_fullname, anaesthetist, procedure, timestamp]
+    patient_to_backup_file(data)
+    upload_aws(data)
 
-	ocr_date, ocr_fullname = detect_text(im_date, im_surname, im_firstname)
-	data = (ocr_date, endoscopist, record_number, ocr_fullname, anaesthetist, procedure, timestamp)
-	patient_to_file(data)
-
-			  
+		  
 def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
     """
     Workhorse pyautogui function. Tabs through endobase add patient entry field and inputs data
@@ -289,6 +326,7 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
         except Exception as e:
             print("OCR Failed!")
             print(e)
+            logging.exception()
     
     pya.hotkey('alt', 'o')
     pya.click(1000, 230)
@@ -380,20 +418,20 @@ try:
     print('Connected to Internet' if connected else 'No Internet!')
     logging.info("Connected")
 except Exception:
-    logging.error("No internet.")
+    logging.exception()
 
 
-try:
-	os.remove(pat_file)
-except Exception as e:
-	print('Failed to remove pat_file')
-	print(e)
-
-try:
-    os.remove(today_pat_file)
-except Exception as e:
-    print('Failed to remove today_pat_file')
-    print(e)
+#try:
+#	os.remove(pat_file)
+#except Exception as e:
+#	print('Failed to remove pat_file')
+#	print(e)
+#
+#try:
+#    os.remove(today_pat_file)
+#except Exception as e:
+#    print('Failed to remove today_pat_file')
+#    print(e)
 
 # set up gui
 root = Tk()
