@@ -10,6 +10,7 @@ from collections import defaultdict
 import csv
 from datetime import datetime, timedelta
 import io
+import logging
 import os
 import os.path
 import threading
@@ -85,6 +86,7 @@ enobase_local_path = os.path.join(base, "endobase_local")
 pat_file = os.path.join(enobase_local_path, 'patients.csv')
 today_pat_file = os.path.join(enobase_local_path, 'today_patients.csv')
 screenshot_for_ocr = os.path.join(enobase_local_path, 'final_screenshot.png')
+logging_file = os.path.join(enobase_local_path, 'logging.txt')
 
 today = datetime.today()
 
@@ -113,14 +115,14 @@ def upload_to_aws():
     s3.Object('dec601', 'patients.csv').download_file(pat_file)
 
     temp_list = []
-    with open(pat_file) as h:
+    with open(pat_file, encoding="utf-8") as h:
         reader = csv.reader(h)
         for p in reader:
             pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
-            if pat_date + timedelta(days=10) >= today:
+            if pat_date + timedelta(days=5) >= today:
                 temp_list.append(p)
 
-    with  open(today_pat_file, 'a') as h:
+    with  open(today_pat_file, 'a', encoding="utf-8") as h:
         csv_writer = csv.writer(h, dialect="excel", lineterminator='\n')
         for p in temp_list:
             csv_writer.writerow(p)
@@ -129,8 +131,11 @@ def upload_to_aws():
         with open(today_pat_file, 'rb') as data:
             s3.Bucket('dec601').put_object(Key='patients.csv', Body=data)
             print('Exit upload worked!')
+            logging.info("Exit upload worked!")
     except Exception as e:
         print(e)
+        logging.error("Exit upload failed!")
+        logging.error(e)
 
 
 def patient_to_file(data):
@@ -140,7 +145,7 @@ def patient_to_file(data):
     adds this data to a csv file of patients from this run
     """
 
-    with open(os.path.join(enobase_local_path, today_pat_file), 'at') as f:
+    with open(os.path.join(enobase_local_path, today_pat_file), 'at', encoding="utf-8") as f:
         writer = csv.writer(f, dialect="excel", lineterminator="\n")
         writer.writerow(data)
 
@@ -167,6 +172,7 @@ def detect_text(im1, im2, im3):
     texts is the name of the returned object by the api
     
     """
+    logging.info("Getting ocr.")
     from google.cloud import vision
     client = vision.ImageAnnotatorClient()
 
@@ -185,9 +191,9 @@ def detect_text(im1, im2, im3):
     for text in texts:
 #        ocr_value = text.description
         print('\n"{}"'.format(text.description))
-        vertices = (['({},{})'.format(vertex.x, vertex.y)
-                    for vertex in text.bounding_poly.vertices])
-        print('bounds: {}'.format(','.join(vertices)))
+#        vertices = (['({},{})'.format(vertex.x, vertex.y)
+#                    for vertex in text.bounding_poly.vertices])
+#        print('bounds: {}'.format(','.join(vertices)))
 
     if response.error.message:
         raise Exception(
@@ -201,7 +207,8 @@ def detect_text(im1, im2, im3):
         word_as_string = word.description
         texts_as_string += word_as_string
         texts_as_string += "\n"
-
+    texts_as_string = texts_as_string
+#    logging.info(texts_as_string)
     texts_split = texts_as_string.split("\n")
     print(texts_split[0], texts_split[1], texts_split[2])
     ocr_date = texts_split[0]
@@ -301,9 +308,7 @@ def runner(*args):
     anaesthetist = anaes.get()
     record_number = mrn.get()
     procedure = proc.get()
-    proc.set('None')
-    mrn.set('')
-    mr.focus()
+
 
     no_doc = endoscopist not in ENDOSCOPISTS
     no_an = anaesthetist not in ANAESTHETISTS
@@ -364,10 +369,18 @@ def runner(*args):
         procedure = 'Colonoscopy'
         clicks(procedure, record_number, endoscopist, anaesthetist, double_flag)
 
+    proc.set('None')
+    mrn.set('')
+    mr.focus()
 # start of script
-connected = connect()
-print('Connected to Internet' if connected else 'No Internet!')
+logging.basicConfig(filename=logging_file, level=logging.INFO, format="%(asctime)s %(message)s")
 
+try:
+    connected = connect()
+    print('Connected to Internet' if connected else 'No Internet!')
+    logging.info("Connected")
+except Exception:
+    logging.error("No internet.")
 
 
 try:
@@ -434,7 +447,7 @@ pr.grid(column=2, row=4, sticky=W)
 
 but = ttk.Button(mainframe, text='Send!', command=runner)
 but.grid(column=2, row=5, sticky=E)
-but.bind('<Return>', runner)
+root.bind('<Return>', runner)
 
 for child in mainframe.winfo_children():
     child.grid_configure(padx=5, pady=5)
