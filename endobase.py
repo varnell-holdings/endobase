@@ -259,7 +259,7 @@ def upload_aws(data):
                 if pat_date + timedelta(days=5) >= today:
                     temp_list.append(p)
             except:
-                logging.exception()
+                logging.exception("Bad date format")
                 continue
     temp_list.append(data)
     # write the temp list over the old aws file
@@ -276,14 +276,14 @@ def upload_aws(data):
     except Exception as e:
         print(e)
         logging.error("upload failed!")
-        logging.exception()
+        logging.exception("upload failed!")
 
     try:
         os.remove(aws_file)
     except Exception as e:
         print('Failed to remove aws_file')
         print(e)
-        logging.exception()
+        logging.exception('Failed to remove aws_file')
 
 
 def ocr(im_date, im_surname, im_firstname, endoscopist, record_number, anaesthetist, procedure, timestamp):
@@ -330,7 +330,7 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
         except Exception as e:
             print("OCR Failed!")
             print(e)
-            logging.exception()
+            logging.exception("OCR Failed!")
     
     pya.hotkey('alt', 'o')
     pya.click(1000, 230)
@@ -422,7 +422,7 @@ try:
     print('Connected to Internet' if connected else 'No Internet!')
     logging.info("Connected")
 except Exception:
-    logging.exception()
+    logging.exception('No Internet!')
 
 
 #try:
