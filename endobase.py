@@ -254,9 +254,13 @@ def upload_aws(data):
     with open(aws_file, encoding="utf-8") as h:
         reader = csv.reader(h)
         for p in reader:
-            pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
-            if pat_date + timedelta(days=5) >= today:
-                temp_list.append(p)
+            try:
+                pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
+                if pat_date + timedelta(days=5) >= today:
+                    temp_list.append(p)
+            except:
+                logging.exception()
+                continue
     temp_list.append(data)
     # write the temp list over the old aws file
     with  open(aws_file, 'w', encoding="utf-8") as h:
