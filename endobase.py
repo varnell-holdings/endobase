@@ -101,42 +101,6 @@ def connect():
         return False
 
 
-#@atexit.register
-#def upload_to_aws():
-#    """
-#    Downloads csv file from aws s3 bucket dec601
-#    puts the entries in a list while deleting records older than 10 days
-#    concatenates that with the csv file of patients added in this run 
-#    - today_pat_file
-#    uploads csv file to s3
-#    """
-#    s3 = boto3.resource('s3')  
-#    
-#    s3.Object('dec601', 'patients.csv').download_file(pat_file)
-#
-#    temp_list = []
-#    with open(pat_file, encoding="utf-8") as h:
-#        reader = csv.reader(h)
-#        for p in reader:
-#            pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
-#            if pat_date + timedelta(days=5) >= today:
-#                temp_list.append(p)
-#
-#    with  open(today_pat_file, 'a', encoding="utf-8") as h:
-#        csv_writer = csv.writer(h, dialect="excel", lineterminator='\n')
-#        for p in temp_list:
-#            csv_writer.writerow(p)
-#  
-#    try:
-#        with open(today_pat_file, 'rb') as data:
-#            s3.Bucket('dec601').put_object(Key='patients.csv', Body=data)
-#            print('upload worked!')
-#            logging.info("upload worked!")
-#    except Exception as e:
-#        print(e)
-#        logging.error("upload failed!")
-#        logging.error(e)
-
 
 def patient_to_backup_file(data):
     """
@@ -212,6 +176,14 @@ def detect_text(im1, im2, im3):
     texts_split = texts_as_string.split("\n")
     print(texts_split[0], texts_split[1], texts_split[2])
     ocr_date = texts_split[0]
+   # add leading zero if missed by ocr and test for working scanned date else set to "error"    
+    try:
+        if len(ocr_date) == 9:
+            ocr_date = "0" + ocr_date
+        datetime.strptime(ocr_date, "%d/%m/%Y")
+    except:
+        ocr_date = "error"
+
     ocr_fullname = texts_split[1] + ", " + texts_split[2]
 
     return ocr_date, ocr_fullname
@@ -255,7 +227,7 @@ def upload_aws(data):
         reader = csv.reader(h)
         for p in reader:
             try:
-                pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
+                pat_date = datetime.strptime(p[6][-8:], "%d%m%Y")
                 if pat_date + timedelta(days=5) >= today:
                     temp_list.append(p)
             except:
@@ -321,7 +293,7 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
         try:
             im_date = get_date_image()
             im_surname, im_firstname = get_names_images()
-            timestamp = datetime.now().strftime("%H%M%S")
+            timestamp = datetime.now().strftime("%H%M%S%d%m%Y")
 	
             t = threading.Thread(target=ocr, args=(im_date, im_surname,
                                  im_firstname, endoscopist, record_number,
