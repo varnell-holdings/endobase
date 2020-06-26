@@ -155,9 +155,7 @@ def detect_text(im1, im2, im3):
     for text in texts:
 #        ocr_value = text.description
         print('\n"{}"'.format(text.description))
-#        vertices = (['({},{})'.format(vertex.x, vertex.y)
-#                    for vertex in text.bounding_poly.vertices])
-#        print('bounds: {}'.format(','.join(vertices)))
+
 
     if response.error.message:
         raise Exception(
@@ -172,7 +170,6 @@ def detect_text(im1, im2, im3):
         texts_as_string += word_as_string
         texts_as_string += "\n"
     texts_as_string = texts_as_string
-#    logging.info(texts_as_string)
     texts_split = texts_as_string.split("\n")
     print(texts_split[0], texts_split[1], texts_split[2])
     ocr_date = texts_split[0]
@@ -219,8 +216,11 @@ def get_names_images():
 
 
 def upload_aws(data):
+    """ Get the aws file. Delete old entries. Add the new data & upload."""
+    
     s3 = boto3.resource('s3')  
     s3.Object('dec601', 'patients.csv').download_file(aws_file)
+
     # put aws data into temp list & remove old data
     temp_list = []
     with open(aws_file, encoding="utf-8") as h:
@@ -228,17 +228,19 @@ def upload_aws(data):
         for p in reader:
             try:
                 pat_date = datetime.strptime(p[6][-8:], "%d%m%Y")
-                if pat_date + timedelta(days=5) >= today:
+                if pat_date + timedelta(days=12) >= today:
                     temp_list.append(p)
             except:
                 logging.exception("Bad date format")
-                continue
+
     temp_list.append(data)
+
     # write the temp list over the old aws file
     with  open(aws_file, 'w', encoding="utf-8") as h:
             csv_writer = csv.writer(h, dialect="excel", lineterminator='\n')
             for p in temp_list:
                 csv_writer.writerow(p)
+
     # upload aws file
     try:
         with open(aws_file, 'rb') as data:
@@ -247,7 +249,6 @@ def upload_aws(data):
             logging.info("upload worked!")
     except Exception as e:
         print(e)
-        logging.error("upload failed!")
         logging.exception("upload failed!")
 
     try:
@@ -396,18 +397,6 @@ try:
 except Exception:
     logging.exception('No Internet!')
 
-
-#try:
-#	os.remove(pat_file)
-#except Exception as e:
-#	print('Failed to remove pat_file')
-#	print(e)
-#
-#try:
-#    os.remove(today_pat_file)
-#except Exception as e:
-#    print('Failed to remove today_pat_file')
-#    print(e)
 
 # set up gui
 root = Tk()
