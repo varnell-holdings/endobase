@@ -167,15 +167,13 @@ def detect_text(im1, im2, im3):
 #    iterate over returned object and get a newline separated string
 #   also make a name for the image that was sent to google for ocr experiment
     texts_as_string = ""
-    image_name = ""
     for word in texts:
         word_as_string = word.description
         texts_as_string += word_as_string
-        image_name += word_as_string
         texts_as_string += "\n"
 
     texts_split = texts_as_string.split("\n")
-    print(texts_split[0], texts_split[1], texts_split[2])
+#    print(texts_split[0], texts_split[1], texts_split[2])
     ocr_date = texts_split[0]
    # add leading zero if missed by ocr and test for working scanned date else set to "error"    
     try:
@@ -186,8 +184,11 @@ def detect_text(im1, im2, im3):
         ocr_date = "error"
 
     ocr_fullname = texts_split[1] + ", " + texts_split[2]
-
-    return ocr_date, ocr_fullname, image_name
+    keras_date = ocr_date.replace("/", "-")
+    keras_fullname = texts_split[1] + texts_split[2]
+    keras_name = keras_date + keras_fullname
+    print(keras_name)
+    return ocr_date, ocr_fullname, keras_name
     
 
 def store_image_for_keras(image_name):
@@ -276,11 +277,11 @@ def upload_aws(data):
 
 def ocr(im_date, im_surname, im_firstname, endoscopist, record_number, anaesthetist, procedure, timestamp):
     """Wrapper function. For Thread call"""
-    ocr_date, ocr_fullname, image_name = detect_text(im_date, im_surname, im_firstname)
+    ocr_date, ocr_fullname, keras_name = detect_text(im_date, im_surname, im_firstname)
     data = [ocr_date, endoscopist, record_number, ocr_fullname, anaesthetist, procedure, timestamp]
     patient_to_backup_file(data)
     upload_aws(data)
-    store_image_for_keras(image_name)
+    store_image_for_keras(keras_name)
 
 		  
 def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
