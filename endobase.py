@@ -275,10 +275,10 @@ def upload_aws(data):
         logging.exception('Failed to remove aws_file')
 
 
-def ocr(im_date, im_surname, im_firstname, endoscopist, record_number, anaesthetist, procedure, timestamp):
+def ocr(im_date, im_surname, im_firstname, endoscopist, record_number, anaesthetist, double_flag, timestamp):
     """Wrapper function. For Thread call"""
     ocr_date, ocr_fullname, keras_name = detect_text(im_date, im_surname, im_firstname)
-    data = [ocr_date, endoscopist, record_number, ocr_fullname, anaesthetist, procedure, timestamp]
+    data = [ocr_date, endoscopist, record_number, ocr_fullname, anaesthetist, double_flag, timestamp]
     patient_to_backup_file(data)
     upload_aws(data)
     store_image_for_keras(keras_name)
@@ -315,7 +315,7 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
 	
             t = threading.Thread(target=ocr, args=(im_date, im_surname,
                                  im_firstname, endoscopist, record_number,
-                                 anaesthetist, procedure, timestamp))
+                                 anaesthetist, double_flag, timestamp))
             t.start()
         except Exception as e:
             print("OCR Failed!")
