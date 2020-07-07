@@ -94,15 +94,6 @@ today = datetime.today()
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(endobase_local_path, 'named-chariot-275007-760483f6424c.json')
 
 
-def connect():
-    try:
-        urllib.request.urlopen('http://google.com')
-        return True
-    except:
-        return False
-
-
-
 def patient_to_backup_file(data):
     """
     input data is a tuple containing
@@ -307,7 +298,7 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
 
     print('[DOUBLE_FLAG] {}'.format(double_flag))
 
-    if ((not double_flag) or (double_flag and procedure == 'Gastroscopy')) and connected:
+    if ((not double_flag) or (double_flag and procedure == 'Gastroscopy')):
         try:
             im_date = get_date_image()
             im_surname, im_firstname = get_names_images()
@@ -406,13 +397,6 @@ def runner(*args):
     mr.focus()
 # start of script
 logging.basicConfig(filename=logging_file, level=logging.INFO, format="%(asctime)s %(message)s")
-
-try:
-    connected = connect()
-    print('Connected to Internet' if connected else 'No Internet!')
-    logging.info("Connected")
-except Exception:
-    logging.exception('No Internet!')
 
 
 # set up gui
