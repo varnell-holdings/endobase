@@ -3,6 +3,7 @@
 Data entry for endobase.
 Also uploads data to an AWS bucket for use by docbill
 program on anaesthetist's computers
+Stores screenshots & google ocr data for a possible keras ocr project.
 """
 
 #import atexit
@@ -13,6 +14,7 @@ import io
 import logging
 import os
 import os.path
+import shutil
 import threading
 from tkinter import Tk, N, S, E, W, StringVar, ttk, Menu, FALSE
 import urllib.request
@@ -42,7 +44,6 @@ ANAESTHETISTS = ['Barrett',
                  'Stevens',
                  'Stone',
                  'Tester',
-                 'Thompson',
                  'Tillett',
                  'Vuong',
                  'Wood']
@@ -61,7 +62,6 @@ ENDOSCOPISTS = ['Bariol',
                 'Williams',
                 'DE LUCA',
                 'Owen',
-                'Bye',
                 'Kim',
                 'Haifer',
                 'Lockart',
@@ -81,61 +81,17 @@ PROCEDURES = ['None',
 
 add = os.path.dirname(os.path.abspath(__file__))
 base = os.path.dirname(add)
-enobase_local_path = os.path.join(base, "endobase_local")
+endobase_local_path = os.path.join(base, "endobase_local")
+keras_path = os.path.join(endobase_local_path, "keras")
 
-aws_file = os.path.join(enobase_local_path, 'patients.csv')
-backup_pat_file = os.path.join(enobase_local_path, 'backup_patients.csv')
-screenshot_for_ocr = os.path.join(enobase_local_path, 'final_screenshot.png')
-logging_file = os.path.join(enobase_local_path, 'logging.txt')
+aws_file = os.path.join(endobase_local_path, 'patients.csv')
+backup_pat_file = os.path.join(endobase_local_path, 'backup_patients.csv')
+screenshot_for_ocr = os.path.join(endobase_local_path, 'final_screenshot.png')
+logging_file = os.path.join(endobase_local_path, 'logging.txt')
 
 today = datetime.today()
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(enobase_local_path, 'named-chariot-275007-760483f6424c.json')
-
-
-def connect():
-    try:
-        urllib.request.urlopen('http://google.com')
-        return True
-    except:
-        return False
-
-
-#@atexit.register
-#def upload_to_aws():
-#    """
-#    Downloads csv file from aws s3 bucket dec601
-#    puts the entries in a list while deleting records older than 10 days
-#    concatenates that with the csv file of patients added in this run 
-#    - today_pat_file
-#    uploads csv file to s3
-#    """
-#    s3 = boto3.resource('s3')  
-#    
-#    s3.Object('dec601', 'patients.csv').download_file(pat_file)
-#
-#    temp_list = []
-#    with open(pat_file, encoding="utf-8") as h:
-#        reader = csv.reader(h)
-#        for p in reader:
-#            pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
-#            if pat_date + timedelta(days=5) >= today:
-#                temp_list.append(p)
-#
-#    with  open(today_pat_file, 'a', encoding="utf-8") as h:
-#        csv_writer = csv.writer(h, dialect="excel", lineterminator='\n')
-#        for p in temp_list:
-#            csv_writer.writerow(p)
-#  
-#    try:
-#        with open(today_pat_file, 'rb') as data:
-#            s3.Bucket('dec601').put_object(Key='patients.csv', Body=data)
-#            print('upload worked!')
-#            logging.info("upload worked!")
-#    except Exception as e:
-#        print(e)
-#        logging.error("upload failed!")
-#        logging.error(e)
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(endobase_local_path, 'named-chariot-275007-760483f6424c.json')
 
 
 def patient_to_backup_file(data):
@@ -145,7 +101,7 @@ def patient_to_backup_file(data):
     adds this data to a csv file of patients from this run
     """
 
-    with open(os.path.join(enobase_local_path, backup_pat_file), 'at', encoding="utf-8") as f:
+    with open(os.path.join(endobase_local_path, backup_pat_file), 'at', encoding="utf-8") as f:
         writer = csv.writer(f, dialect="excel", lineterminator="\n")
         writer.writerow(data)
 
@@ -191,9 +147,7 @@ def detect_text(im1, im2, im3):
     for text in texts:
 #        ocr_value = text.description
         print('\n"{}"'.format(text.description))
-#        vertices = (['({},{})'.format(vertex.x, vertex.y)
-#                    for vertex in text.bounding_poly.vertices])
-#        print('bounds: {}'.format(','.join(vertices)))
+
 
     if response.error.message:
         raise Exception(
@@ -202,29 +156,51 @@ def detect_text(im1, im2, im3):
                 response.error.message))
    
 #    iterate over returned object and get a newline separated string
+#   also make a name for the image that was sent to google for ocr experiment
     texts_as_string = ""
     for word in texts:
         word_as_string = word.description
         texts_as_string += word_as_string
         texts_as_string += "\n"
-    texts_as_string = texts_as_string
-#    logging.info(texts_as_string)
-    texts_split = texts_as_string.split("\n")
-    print(texts_split[0], texts_split[1], texts_split[2])
-    ocr_date = texts_split[0]
-    ocr_fullname = texts_split[1] + ", " + texts_split[2]
 
-    return ocr_date, ocr_fullname
+    texts_split = texts_as_string.split("\n")
+#    print(texts_split[0], texts_split[1], texts_split[2])
+    ocr_date = texts_split[0]
+   # add leading zero if missed by ocr and test for working scanned date else set to "error"    
+    try:
+        if len(ocr_date) == 9:
+            ocr_date = "0" + ocr_date
+        datetime.strptime(ocr_date, "%d/%m/%Y")
+    except:
+        ocr_date = "error"
+
+    ocr_fullname = texts_split[1] + ", " + texts_split[2]
+    keras_date = ocr_date.replace("/", "-")
+    keras_fullname = texts_split[1] + texts_split[2]
+    keras_name = keras_date + keras_fullname
+    print(keras_name)
+    return ocr_date, ocr_fullname, keras_name
     
+
+def store_image_for_keras(image_name):
+    """Store screenshots in a keras folder with google ocr results as filename"""
+
+    image_name = image_name + ".png"
+    try:
+        target = os.path.join(keras_path, image_name)
+        shutil.move(screenshot_for_ocr, target)
+    except:
+        logging.exception("keras move failed.")
+
 
 def get_date_image():
     """
     Use pyautogui to get a screenshot of the date box on endobase entry form
     Save it as this_date.png and return a Pil Image object
     """
-    x, y = pya.locateCenterOnScreen(os.path.join(enobase_local_path, 'date.png'), region=(400, 200, 400, 200))
+    x, y = pya.locateCenterOnScreen(os.path.join(endobase_local_path, 'date.png'), region=(400, 200, 400, 200))
     print("[DATE] {}, {}".format(x, y))
-    this_date = os.path.join(enobase_local_path, 'this_date.jpg')
+    this_date = os.path.join(endobase_local_path, 'this_date.jpg')
     im_date = pya.screenshot(this_date, region=(x - 15, y + 7, 200, 25))
     return im_date
 
@@ -234,39 +210,44 @@ def get_names_images():
     Use pyautogui to get a screenshot of the names boxes on endobase entry form
     Save them as 'this_surname.jpg' and 'this_firstname.jpg'  and return two Pil Image objects
     """
-    x, y = pya.locateCenterOnScreen(os.path.join(enobase_local_path, 'names.png'), region=(0, 300, 200, 100))
+    x, y = pya.locateCenterOnScreen(os.path.join(endobase_local_path, 'names.png'), region=(0, 300, 200, 100))
     print("[NAME] {}, {}".format(x, y))
     
-    this_surname = os.path.join(enobase_local_path, 'this_surname.jpg')
+    this_surname = os.path.join(endobase_local_path, 'this_surname.jpg')
     im_surname = pya.screenshot(this_surname, region=(0, y + 20, 200, 25))
     
-    this_firstname = os.path.join(enobase_local_path, 'this_firstname.jpg')
+    this_firstname = os.path.join(endobase_local_path, 'this_firstname.jpg')
     im_firstname = pya.screenshot(this_firstname, region=(0, y + 65, 200, 25))
     
     return im_surname, im_firstname
 
 
 def upload_aws(data):
+    """ Get the aws file. Delete old entries. Add the new data & upload."""
+    
     s3 = boto3.resource('s3')  
     s3.Object('dec601', 'patients.csv').download_file(aws_file)
+
     # put aws data into temp list & remove old data
     temp_list = []
     with open(aws_file, encoding="utf-8") as h:
         reader = csv.reader(h)
         for p in reader:
             try:
-                pat_date = datetime.strptime(p[0][-10:], "%d/%m/%Y")
-                if pat_date + timedelta(days=5) >= today:
+                pat_date = datetime.strptime(p[6][-8:], "%d%m%Y")
+                if pat_date + timedelta(days=12) >= today:
                     temp_list.append(p)
             except:
                 logging.exception("Bad date format")
-                continue
+
     temp_list.append(data)
+
     # write the temp list over the old aws file
     with  open(aws_file, 'w', encoding="utf-8") as h:
             csv_writer = csv.writer(h, dialect="excel", lineterminator='\n')
             for p in temp_list:
                 csv_writer.writerow(p)
+
     # upload aws file
     try:
         with open(aws_file, 'rb') as data:
@@ -275,7 +256,6 @@ def upload_aws(data):
             logging.info("upload worked!")
     except Exception as e:
         print(e)
-        logging.error("upload failed!")
         logging.exception("upload failed!")
 
     try:
@@ -286,12 +266,13 @@ def upload_aws(data):
         logging.exception('Failed to remove aws_file')
 
 
-def ocr(im_date, im_surname, im_firstname, endoscopist, record_number, anaesthetist, procedure, timestamp):
+def ocr(im_date, im_surname, im_firstname, endoscopist, record_number, anaesthetist, double_flag, timestamp):
     """Wrapper function. For Thread call"""
-    ocr_date, ocr_fullname = detect_text(im_date, im_surname, im_firstname)
-    data = [ocr_date, endoscopist, record_number, ocr_fullname, anaesthetist, procedure, timestamp]
+    ocr_date, ocr_fullname, keras_name = detect_text(im_date, im_surname, im_firstname)
+    data = [ocr_date, endoscopist, record_number, ocr_fullname, anaesthetist, double_flag, timestamp]
     patient_to_backup_file(data)
     upload_aws(data)
+    store_image_for_keras(keras_name)
 
 		  
 def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
@@ -317,15 +298,15 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
 
     print('[DOUBLE_FLAG] {}'.format(double_flag))
 
-    if ((not double_flag) or (double_flag and procedure == 'Gastroscopy')) and connected:
+    if ((not double_flag) or (double_flag and procedure == 'Gastroscopy')):
         try:
             im_date = get_date_image()
             im_surname, im_firstname = get_names_images()
-            timestamp = datetime.now().strftime("%H%M%S")
+            timestamp = datetime.now().strftime("%H%M%S%d%m%Y")
 	
             t = threading.Thread(target=ocr, args=(im_date, im_surname,
                                  im_firstname, endoscopist, record_number,
-                                 anaesthetist, procedure, timestamp))
+                                 anaesthetist, double_flag, timestamp))
             t.start()
         except Exception as e:
             print("OCR Failed!")
@@ -417,25 +398,6 @@ def runner(*args):
 # start of script
 logging.basicConfig(filename=logging_file, level=logging.INFO, format="%(asctime)s %(message)s")
 
-try:
-    connected = connect()
-    print('Connected to Internet' if connected else 'No Internet!')
-    logging.info("Connected")
-except Exception:
-    logging.exception('No Internet!')
-
-
-#try:
-#	os.remove(pat_file)
-#except Exception as e:
-#	print('Failed to remove pat_file')
-#	print(e)
-#
-#try:
-#    os.remove(today_pat_file)
-#except Exception as e:
-#    print('Failed to remove today_pat_file')
-#    print(e)
 
 # set up gui
 root = Tk()
