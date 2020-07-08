@@ -394,6 +394,9 @@ def runner(*args):
 
     proc.set('None')
     mrn.set('')
+    print(root.winfo_x(), root.winfo_y())
+#    x, y = pya.locateCenterOnScreen(os.path.join(endobase_local_path, 'send.png'))#  , region=(300, 0, 200, 300))
+    pya.click(root.winfo_x() + 250, root.winfo_y() + 150)
     mr.focus()
 # start of script
 logging.basicConfig(filename=logging_file, level=logging.INFO, format="%(asctime)s %(message)s")
