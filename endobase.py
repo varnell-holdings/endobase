@@ -17,7 +17,6 @@ import os.path
 import shutil
 import threading
 from tkinter import Tk, N, S, E, W, StringVar, ttk, Menu, FALSE
-import urllib.request
 import webbrowser
 
 import boto3
@@ -90,6 +89,7 @@ screenshot_for_ocr = os.path.join(endobase_local_path, 'final_screenshot.png')
 logging_file = os.path.join(endobase_local_path, 'logging.txt')
 
 today = datetime.today()
+date_check = False
 
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(endobase_local_path, 'named-chariot-275007-760483f6424c.json')
 
@@ -128,6 +128,7 @@ def detect_text(im1, im2, im3):
     texts is the name of the returned object by the api
     
     """
+    global ocr_date
     logging.info("Getting ocr.")
     from google.cloud import vision
     client = vision.ImageAnnotatorClient()
@@ -173,6 +174,7 @@ def detect_text(im1, im2, im3):
         datetime.strptime(ocr_date, "%d/%m/%Y")
     except:
         ocr_date = "error"
+
 
     ocr_fullname = texts_split[1] + ", " + texts_split[2]
     keras_date = ocr_date.replace("/", "-")
@@ -280,6 +282,7 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
     Workhorse pyautogui function. Tabs through endobase add patient entry field and inputs data
     Then tries to ocr the date and name fields and write them to a csv file
     """
+    global date_check
     pya.click(250, 50)
     pya.PAUSE = 0.5
     pya.hotkey('alt', 'a')
@@ -315,6 +318,20 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
     
     pya.hotkey('alt', 'o')
     pya.click(1000, 230)
+    if date_check == False:
+        t.join()
+        test_ocr = datetime.strptime(ocr_date, "%d/%m/%Y")
+        if ocr_date != "error":
+            reply = pya.confirm(
+                text='You are entering for this date -->  {}  {}'.format(test_ocr.strftime("%A"), ocr_date),
+                title='',
+                buttons=['Continue', 'Cancel'])
+            if reply == "Continue":
+                date_check = True
+            else:
+                pya.alert("Delete this patient and change the date!")
+                raise Exception
+
 
 def open_roster():
     webbrowser.open('http://dec601.nfshost.com/deccal.html')
