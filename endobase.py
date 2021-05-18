@@ -169,6 +169,7 @@ def detect_text(im1, im2, im3):
 
     texts_split = texts_as_string.split("\n")
 #    print(texts_split[0], texts_split[1], texts_split[2])
+    logging.info("Date: %s Surname: %s Firstname: %s",texts_split[0], texts_split[1], texts_split[2])
     ocr_date = texts_split[0]
    # add leading zero if missed by ocr and test for working scanned date else set to "error"    
     try:
