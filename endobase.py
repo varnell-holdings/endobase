@@ -141,7 +141,7 @@ def detect_text(im1, im2, im3):
     with io.open(screenshot_for_ocr, 'rb') as image_file:
         content = image_file.read()
 
-    image = vision.types.Image(content=content)
+    image = vision.Image(content=content)
 
     response = client.text_detection(image=image)
     texts = response.text_annotations
@@ -278,7 +278,7 @@ def ocr(im_date, im_surname, im_firstname, endoscopist, record_number, anaesthet
     data = [ocr_date, endoscopist, record_number, ocr_fullname, anaesthetist, double_flag, timestamp]
     patient_to_backup_file(data)
     upload_aws(data)
-    store_image_for_keras(keras_name)
+#    store_image_for_keras(keras_name)
 
 		  
 def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
@@ -305,36 +305,36 @@ def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
 
     print('[DOUBLE_FLAG] {}'.format(double_flag))
 
-#    if ((not double_flag) or (double_flag and procedure == 'Gastroscopy')):
-#        try:
-#            im_date = get_date_image()
-#            im_surname, im_firstname = get_names_images()
-#            timestamp = datetime.now().strftime("%H%M%S%d%m%Y")#
-#	
-#            t = threading.Thread(target=ocr, args=(im_date, im_surname,
-#                                 im_firstname, endoscopist, record_number,
-#                                 anaesthetist, double_flag, timestamp))
-#            t.start()
-#        except Exception as e:
-#            print("OCR Failed!")
-#            print(e)
-#            logging.exception("OCR Failed!")
+    if ((not double_flag) or (double_flag and procedure == 'Gastroscopy')):
+        try:
+            im_date = get_date_image()
+            im_surname, im_firstname = get_names_images()
+            timestamp = datetime.now().strftime("%H%M%S%d%m%Y")#
+	
+            t = threading.Thread(target=ocr, args=(im_date, im_surname,
+                                 im_firstname, endoscopist, record_number,
+                                 anaesthetist, double_flag, timestamp))
+            t.start()
+        except Exception as e:
+            print("OCR Failed!")
+            print(e)
+            logging.exception("OCR Failed!")
     
     pya.hotkey('alt', 'o')
     pya.click(1000, 230)
-#    if date_check == False:
-#        t.join()
-#        test_ocr = datetime.strptime(ocr_date, "%d/%m/%Y")
-#        if ocr_date != "error":
-#            reply = pya.confirm(
-#                text='You are entering for this date -->  {}  {}'.format(test_ocr.strftime("%A"), ocr_date),
-#                title='',
-#                buttons=['Continue', 'Cancel'])
-#            if reply == "Continue":
-#                date_check = True
-#            else:
-#                pya.alert("Delete this patient and change the date!")
-#                raise Exception
+    if date_check == False:
+        t.join()
+        test_ocr = datetime.strptime(ocr_date, "%d/%m/%Y")
+        if ocr_date != "error":
+            reply = pya.confirm(
+                text='You are entering for this date -->  {}  {}'.format(test_ocr.strftime("%A"), ocr_date),
+                title='',
+                buttons=['Continue', 'Cancel'])
+            if reply == "Continue":
+                date_check = True
+            else:
+                pya.alert("Delete this patient and change the date!")
+                raise Exception
 
 
 def open_roster():
