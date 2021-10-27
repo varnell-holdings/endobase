@@ -84,7 +84,7 @@ PROCEDURES = ['None',
 add = os.path.dirname(os.path.abspath(__file__))
 base = os.path.dirname(add)
 endobase_local_path = os.path.join(base, "endobase_local")
-keras_path = os.path.join(endobase_local_path, "keras")
+
 
 aws_file = os.path.join(endobase_local_path, 'patients.csv')
 backup_pat_file = os.path.join(endobase_local_path, 'backup_patients.csv')
@@ -131,72 +131,55 @@ def detect_text(im1, im2, im3):
     texts is the name of the returned object by the api
     
     """
-    global ocr_date
-    logging.info("Getting ocr.")
-    from google.cloud import vision
-    client = vision.ImageAnnotatorClient()
-    print("got here")
-    get_concat_h(im1, im2, im3)
-	
-    with io.open(screenshot_for_ocr, 'rb') as image_file:
-        content = image_file.read()
-
-    image = vision.Image(content=content)
-
-    response = client.text_detection(image=image)
-    texts = response.text_annotations
-        
-#    The following is just terminal output
-    print('Texts:')
-    for text in texts:
-#        ocr_value = text.description
-        print('\n"{}"'.format(text.description))
-
-
-    if response.error.message:
-        raise Exception(
-            '{}\nFor more info on error messages, check: '
-            'https://cloud.google.com/apis/design/errors'.format(
-                response.error.message))
-   
-#    iterate over returned object and get a newline separated string
-#   also make a name for the image that was sent to google for ocr experiment
-    texts_as_string = ""
-    for word in texts:
-        word_as_string = word.description
-        texts_as_string += word_as_string
-        texts_as_string += "\n"
-
-    texts_split = texts_as_string.split("\n")
-#    print(texts_split[0], texts_split[1], texts_split[2])
-    logging.info("Date: %s Surname: %s Firstname: %s",texts_split[0], texts_split[1], texts_split[2])
-    ocr_date = texts_split[0]
-   # add leading zero if missed by ocr and test for working scanned date else set to "error"    
-    try:
-        if len(ocr_date) == 9:
-            ocr_date = "0" + ocr_date
-        datetime.strptime(ocr_date, "%d/%m/%Y")
-    except:
-        ocr_date = "error"
+    for n in range(4):
+        global ocr_date
+        logging.info("Getting ocr.")
+        from google.cloud import vision
+        client = vision.ImageAnnotatorClient()
+        print("got here")
+        get_concat_h(im1, im2, im3)
+    	
+        with io.open(screenshot_for_ocr, 'rb') as image_file:
+            content = image_file.read()
+    
+        image = vision.Image(content=content)
+    
+        response = client.text_detection(image=image)
+        texts = response.text_annotations
+    
+    
+        if response.error.message:
+            raise Exception(
+                '{}\nFor more info on error messages, check: '
+                'https://cloud.google.com/apis/design/errors'.format(
+                    response.error.message))
+       
+    #    iterate over returned object and get a newline separated string
+    #   also make a name for the image that was sent to google for ocr experiment
+        texts_as_string = ""
+        for word in texts:
+            word_as_string = word.description
+            texts_as_string += word_as_string
+            texts_as_string += "\n"
+    
+        texts_split = texts_as_string.split("\n")
+    #    print(texts_split[0], texts_split[1], texts_split[2])
+        logging.info("Date: %s Surname: %s Firstname: %s",texts_split[0], texts_split[1], texts_split[2])
+        ocr_date = texts_split[0]
+       # add leading zero if missed by ocr and test for working scanned date else set to "error"    
+        try:
+            if len(ocr_date) == 9:
+                ocr_date = "0" + ocr_date
+            datetime.strptime(ocr_date, "%d/%m/%Y")
+        except:
+            ocr_date = "error"
+        if ocr_date != "error":
+            break
 
 
     ocr_fullname = texts_split[1] + ", " + texts_split[2]
-    keras_date = ocr_date.replace("/", "-")
-    keras_fullname = texts_split[1] + texts_split[2]
-    keras_name = keras_date + keras_fullname
-    print(keras_name)
-    return ocr_date, ocr_fullname, keras_name
-    
 
-def store_image_for_keras(image_name):
-    """Store screenshots in a keras folder with google ocr results as filename"""
-
-    image_name = image_name + ".png"
-    try:
-        target = os.path.join(keras_path, image_name)
-        shutil.move(screenshot_for_ocr, target)
-    except:
-        logging.exception("keras move failed.")
+    return ocr_date, ocr_fullname
 
 
 def get_date_image():
@@ -207,7 +190,7 @@ def get_date_image():
     x, y = pya.locateCenterOnScreen(os.path.join(endobase_local_path, 'date.png'), region=(400, 200, 400, 200))
     print("[DATE] {}, {}".format(x, y))
     this_date = os.path.join(endobase_local_path, 'this_date.jpg')
-    im_date = pya.screenshot(this_date, region=(x - 15, y + 7, 200, 25))
+    im_date = pya.screenshot(this_date, region=(x - 15, y + 9, 200, 25))
     return im_date
 
 
@@ -220,10 +203,10 @@ def get_names_images():
     print("[NAME] {}, {}".format(x, y))
     
     this_surname = os.path.join(endobase_local_path, 'this_surname.jpg')
-    im_surname = pya.screenshot(this_surname, region=(0, y + 20, 200, 25))
+    im_surname = pya.screenshot(this_surname, region=(0, y + 22, 200, 25))
     
     this_firstname = os.path.join(endobase_local_path, 'this_firstname.jpg')
-    im_firstname = pya.screenshot(this_firstname, region=(0, y + 65, 200, 25))
+    im_firstname = pya.screenshot(this_firstname, region=(0, y + 67, 200, 25))
     
     return im_surname, im_firstname
 
@@ -274,11 +257,10 @@ def upload_aws(data):
 
 def ocr(im_date, im_surname, im_firstname, endoscopist, record_number, anaesthetist, double_flag, timestamp):
     """Wrapper function. For Thread call"""
-    ocr_date, ocr_fullname, keras_name = detect_text(im_date, im_surname, im_firstname)
+    ocr_date, ocr_fullname = detect_text(im_date, im_surname, im_firstname)
     data = [ocr_date, endoscopist, record_number, ocr_fullname, anaesthetist, double_flag, timestamp]
     patient_to_backup_file(data)
     upload_aws(data)
-#    store_image_for_keras(keras_name)
 
 		  
 def clicks(procedure, record_number, endoscopist, anaesthetist, double_flag):
