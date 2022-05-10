@@ -166,7 +166,16 @@ def detect_text(im1, im2, im3):
     #    print(texts_split[0], texts_split[1], texts_split[2])
         logging.info("Date: %s Surname: %s Firstname: %s",texts_split[0], texts_split[1], texts_split[2])
         ocr_date = texts_split[0]
-       # add leading zero if missed by ocr and test for working scanned date else set to "error"    
+        ocr_surname = texts_split[1]
+        ocr_firstname = texts_split[2]
+       # add leading zero if missed by ocr and test for working scanned date else set to "error"
+       
+        if '/' not in ocr_date:
+            if '/' in ocr_firstname:
+                ocr_date, ocr_firstname = ocr_firstname, ocr_date
+            elif '/' in ocr_surname:
+                ocr_date, ocr_surname = ocr_surname, ocr_date
+        
         try:
             if len(ocr_date) == 9:
                 ocr_date = "0" + ocr_date
@@ -177,7 +186,7 @@ def detect_text(im1, im2, im3):
             break
 
 
-    ocr_fullname = texts_split[1] + ", " + texts_split[2]
+    ocr_fullname = ocr_surname + ", " + ocr_firstname
 
     return ocr_date, ocr_fullname
 
