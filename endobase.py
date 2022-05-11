@@ -14,7 +14,6 @@ import io
 import logging
 import os
 import os.path
-import shutil
 import threading
 from tkinter import Tk, N, S, E, W, StringVar, ttk, Menu, FALSE
 import webbrowser
@@ -175,6 +174,8 @@ def detect_text(im1, im2, im3):
                 ocr_date, ocr_firstname = ocr_firstname, ocr_date
             elif '/' in ocr_surname:
                 ocr_date, ocr_surname = ocr_surname, ocr_date
+        if ocr_firstname[-1].isupper():
+            ocr_firstname, ocr_surname = ocr_surname, ocr_firstname
         
         try:
             if len(ocr_date) == 9:
