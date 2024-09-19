@@ -8,6 +8,7 @@ Stores screenshots & google ocr data for a possible keras ocr project.
 # pip install --upgrade google-cloud-vision  need this
 #import atexit
 from collections import defaultdict
+from configparser import ConfigParser
 import csv
 from datetime import datetime, timedelta
 import io
@@ -24,52 +25,51 @@ from PIL import Image
 import pyautogui as pya
 
 
-ANAESTHETISTS = ['Barrett',
-                 'Bowring',
-                 'Brown',
-                 'Doherty',
-                 'Fulde',
-                 'Heffernan',
-                 'Lee',
-                 'Lepar',   
-                 'Locum',
-                 'Manasiev',
-                 'MOYLE',
-                 "O'Hare",
-                 "O'Neill",
-                 "O'Sullivan",
-                 'Riley',
-                 'Robertson',
-                 'Steele',
-                 'Stevens',
-                 'Stone',
-                 'Tester',
-                 'Tillett',
-                 'Vuong',
-                 'Wood']
+# ANAESTHETISTS = [
+#                  'Barrett',
+#                  'Brown',
+#                  'Fulde',
+#                  'Heffernan',
+#                  'Lee',  
+#                  'Locum',
+#                  'Manasiev',
+#                  "O'Hare",
+#                  "O'Neill",
+#                  "O'Sullivan",
+#                  'Riley',
+#                  'Robertson',
+#                  'Ruff',
+#                  'Stevens',
+#                  'Stone',
+#                  'Tester',
+#                  'Tillett',
+#                  'Vuong',
+#                  'Wood']
 
-ENDOSCOPISTS = ['Bariol',
-                'Danta',
-                'Feller',
-                'GETT',
-                'GHALY',
-                'LORD',
-                'Meagher',
-                'Stoita',
-                'Vickers',
-                'Vivekanandarajah',
-                'Wettstein',
-                'Williams',
-                'Fenton-Lee',
-                'DE LUCA',
-                'Owen',
-                'Kim',
-                'Haifer',
-                'Lockart',
-                'Mill',
-                'NGUYEN',
-                'Sanagapalli',
-                'Wu']
+# ENDOSCOPISTS = ['Bariol',
+#                 'Bensted',
+#                 'Danta',
+#                 'Feller',
+#                 'GETT',
+#                 'GHALY',
+#                 'LORD',
+#                 'Meagher',
+#                 'Stoita',
+#                 'Vickers',
+#                 'Vivekanandarajah',
+#                 'Wettstein',
+#                 'Williams',
+#                 'Fenton-Lee',
+#                 'Owen',
+#                 'Kim',
+#                 'Haifer',
+#                 'Lockart',
+#                 'Mill',
+#                 'Sanagapalli',
+#                 'Anandabaskaran',
+#                 'Chetwood',
+#                 'Crane',
+#                 'Hiu Sin',]
 
 PROCEDURES = ['None',
               'Double',
@@ -83,7 +83,7 @@ PROCEDURES = ['None',
 add = os.path.dirname(os.path.abspath(__file__))
 base = os.path.dirname(add)
 endobase_local_path = os.path.join(base, "endobase_local")
-
+staff_file = os.path.join(endobase_local_path, 'endobase_staff.ini')
 
 aws_file = os.path.join(endobase_local_path, 'patients.csv')
 backup_pat_file = os.path.join(endobase_local_path, 'backup_patients.csv')
@@ -94,6 +94,22 @@ today = datetime.today()
 date_check = False
 
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(endobase_local_path, 'named-chariot-275007-760483f6424c.json')
+
+s3 = boto3.client('s3')
+try:
+    # s3.download_file('dec601', 'endobase_staff.ini', 'staff_file')
+    with open(staff_file, 'wb') as f:
+        s3.download_fileobj('dec601', 'endobase_staff.ini', f)
+except:
+    pass
+
+config_parser = ConfigParser(allow_no_value=True)
+config_parser.read(staff_file)
+
+ENDOSCOPISTS = config_parser.options("ENDOSCOPISTS")
+ENDOSCOPISTS = [a.title() for a in ENDOSCOPISTS]
+ANAESTHETISTS = config_parser.options("ANAESTHETISTS")
+ANAESTHETISTS = [a.title() for a in ANAESTHETISTS]
 
 
 def patient_to_backup_file(data):
