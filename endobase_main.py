@@ -9,7 +9,7 @@ import os.path
 from configparser import ConfigParser
 
 
-# import pyautogui as pya
+import pyautogui as pya
 import boto3
 s3 = boto3.resource("s3")
 
@@ -175,7 +175,8 @@ class DatePickerWindow:
 
 # Function to receive the selected date from the picker
 def on_date_selected(date):
-    date_label.config(text=f"{date.strftime("%d-%m-%Y")}")
+    print_date = date.strftime("%d-%m-%Y")
+    date_label["text"] = print_date
 
 
 def button_enable(*args):
@@ -205,23 +206,7 @@ def runner(*args):
     record_number = mrn.get()
     procedure = proc.get()
 
-    # if (not record_number.isdigit()) or len(record_number) > 6:
-    #     pya.alert(text="MRN looks wrong!", title="", button="OK")
-    #     raise Exception
 
-    # if procedure == "Double":
-    #     double_flag = True
-    #     procedure = "Gastroscopy"
-    # else:
-    #     double_flag = False
-
-    # clicks(procedure, record_number, endoscopist, anaesthetist)
-
-    # if double_flag:
-    #     procedure = "Colonoscopy"
-    #     clicks(procedure, record_number, endoscopist, anaesthetist)
-
-    # alternative ? more readable
     if procedure != "Double":
         double_flag = "False"
         clicks(procedure, record_number, endoscopist, anaesthetist)
@@ -251,7 +236,7 @@ def runner(*args):
 # set up gui
 root = Tk()
 root.title("Endobase Data Entry")
-root.geometry("360x280+900+150")
+root.geometry("360x280+1400+250")
 root.option_add("*tearOff", FALSE)
 
 mainframe = ttk.Frame(root, padding="3 3 12 12")
