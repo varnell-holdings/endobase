@@ -101,7 +101,7 @@ def clicks(procedure, record_number, endoscopist, anaesthetist):
     Workhorse pyautogui function. Tabs through endobase add patient entry page
      and inputs data
     """
-    pya.click(250, 50)
+    pya.click(300, 200)
     pya.PAUSE = 0.5
     pya.hotkey("alt", "a")
     pya.typewrite(["tab"] * 1)
