@@ -10,8 +10,6 @@ from configparser import ConfigParser
 
 
 import pyautogui as pya
-import boto3
-s3 = boto3.resource("s3")
 
 today = datetime.today()
 selected_date = None
@@ -29,11 +27,7 @@ logging.basicConfig(
     format="%(asctime)s %(message)s",
 )
 
-try:
-    s3.Object("dec601", "endobase_staff.ini").download_file(staff_file)
-except Exception as e:
-    logging.info(f"Failed to get staff file from AWS  {e}")
-    pass
+
 
 config_parser = ConfigParser(allow_no_value=True)
 config_parser.read(staff_file)
@@ -57,43 +51,6 @@ def open_roster():
     webbrowser.open("http://dec601.nfshost.com/deccal.html")
 
 
-def upload_aws(data):
-    """Get the aws patients file. Delete old entries.
-    Add the new data & upload."""
-
-    s3.Object("dec601", "patients.csv").download_file(patient_list_file)
-
-    # put aws data into temp list & remove old data
-    temp_list = []
-    with open(patient_list_file, encoding="utf-8") as h:
-        reader = csv.reader(h)
-        for pat in reader:
-            try:
-                pat_date = datetime.strptime(pat[0], "%d/%m/%Y")
-                if pat_date + timedelta(days=12) >= today:
-                    temp_list.append(pat)
-            except Exception as e:
-                logging.info(f"Failed to read patient data from aws list {e}")
-
-    temp_list.append(data)
-
-    # write the temp list over the old aws file
-    with open(patient_list_file, "w", encoding="utf-8") as h:
-        csv_writer = csv.writer(h, dialect="excel", lineterminator="\n")
-        for p in temp_list:
-            csv_writer.writerow(p)
-
-    # upload aws file
-    try:
-        with open(patient_list_file, "rb") as data:
-            s3.Bucket("dec601").put_object(Key="patients.csv", Body=data)
-    except Exception as e:
-        logging.info(f"Failed to upload to AWS  {e}")
-
-    try:
-        os.remove(patient_list_file)
-    except Exception as e:
-        logging.info(f"Failed to remove aws_file  {e}")
 
 
 def clicks(procedure, record_number, endoscopist, anaesthetist):
@@ -198,7 +155,6 @@ def runner(*args):
     Main function that runs when button clicked
     gets data from gui, does a few checks,
     then fires off clicks() function.
-    Then uploads data for docbill checking.
     """
     global selected_date
     endoscopist = endo.get()
@@ -222,7 +178,6 @@ def runner(*args):
         double_flag,
     ]
 
-    upload_aws(data)
 
     # configure gui for next run
     proc.set("")
